@@ -1,0 +1,394 @@
+
+HADOOP SINGLE NODE / MULTI NODE INSTALLATION PRACTICAL
+======================================================
+
+Aim:
+-----
+To install and configure Hadoop in Single Node and Multi Node mode on Ubuntu Linux.
+
+Requirements:
+-------------
+1. Ubuntu Linux
+2. Java
+3. Hadoop
+4. SSH
+
+======================================================
+PART 1 : JAVA INSTALLATION
+======================================================
+
+Step 1: Update Ubuntu
+---------------------
+
+sudo apt update
+
+Step 2: Install Java
+--------------------
+
+sudo apt install openjdk-11-jdk -y
+
+Step 3: Check Java Version
+--------------------------
+
+java -version
+
+Expected Output:
+----------------
+openjdk version "11"
+
+======================================================
+PART 2 : CREATE HADOOP USER
+======================================================
+
+Step 4: Create Hadoop User
+--------------------------
+
+sudo adduser hadoop
+
+Step 5: Give Sudo Permission
+----------------------------
+
+sudo usermod -aG sudo hadoop
+
+Step 6: Login as Hadoop User
+----------------------------
+
+su - hadoop
+
+======================================================
+PART 3 : SSH CONFIGURATION
+======================================================
+
+Step 7: Install SSH
+-------------------
+
+sudo apt install ssh -y
+
+Step 8: Generate SSH Key
+------------------------
+
+ssh-keygen -t rsa -P ""
+
+Press Enter for all options.
+
+Step 9: Copy SSH Key
+--------------------
+
+cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+
+Step 10: Set Permissions
+------------------------
+
+chmod 0600 ~/.ssh/authorized_keys
+
+Step 11: Test SSH
+-----------------
+
+ssh localhost
+
+If login happens without password then SSH setup is successful.
+
+======================================================
+PART 4 : DOWNLOAD HADOOP
+======================================================
+
+Step 12: Download Hadoop
+------------------------
+
+wget https://downloads.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz
+
+Step 13: Extract Hadoop
+-----------------------
+
+tar -xvzf hadoop-3.3.6.tar.gz
+
+Step 14: Move Hadoop Folder
+---------------------------
+
+sudo mv hadoop-3.3.6 /usr/local/hadoop
+
+Step 15: Give Ownership
+-----------------------
+
+sudo chown -R hadoop:hadoop /usr/local/hadoop
+
+======================================================
+PART 5 : SET ENVIRONMENT VARIABLES
+======================================================
+
+Step 16: Open bashrc File
+-------------------------
+
+nano ~/.bashrc
+
+Step 17: Add Following Lines
+----------------------------
+
+export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+export HADOOP_HOME=/usr/local/hadoop
+export HADOOP_INSTALL=$HADOOP_HOME
+export HADOOP_MAPRED_HOME=$HADOOP_HOME
+export HADOOP_COMMON_HOME=$HADOOP_HOME
+export HADOOP_HDFS_HOME=$HADOOP_HOME
+export YARN_HOME=$HADOOP_HOME
+export HADOOP_COMMON_LIB_NATIVE_DIR=$HADOOP_HOME/lib/native
+export PATH=$PATH:$HADOOP_HOME/sbin:$HADOOP_HOME/bin
+
+Step 18: Reload bashrc
+----------------------
+
+source ~/.bashrc
+
+======================================================
+PART 6 : CONFIGURE HADOOP FILES
+======================================================
+
+Go to Hadoop Configuration Folder
+---------------------------------
+
+cd /usr/local/hadoop/etc/hadoop
+
+------------------------------------------------------
+1. Edit hadoop-env.sh
+------------------------------------------------------
+
+nano hadoop-env.sh
+
+Add:
+
+export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+
+------------------------------------------------------
+2. Edit core-site.xml
+------------------------------------------------------
+
+nano core-site.xml
+
+Paste:
+
+<configuration>
+<property>
+<name>fs.defaultFS</name>
+<value>hdfs://localhost:9000</value>
+</property>
+</configuration>
+
+------------------------------------------------------
+3. Edit hdfs-site.xml
+------------------------------------------------------
+
+nano hdfs-site.xml
+
+Paste:
+
+<configuration>
+<property>
+<name>dfs.replication</name>
+<value>1</value>
+</property>
+
+<property>
+<name>dfs.name.dir</name>
+<value>file:///home/hadoop/hdfs/namenode</value>
+</property>
+
+<property>
+<name>dfs.data.dir</name>
+<value>file:///home/hadoop/hdfs/datanode</value>
+</property>
+</configuration>
+
+------------------------------------------------------
+4. Edit mapred-site.xml
+------------------------------------------------------
+
+cp mapred-site.xml.template mapred-site.xml
+
+nano mapred-site.xml
+
+Paste:
+
+<configuration>
+<property>
+<name>mapreduce.framework.name</name>
+<value>yarn</value>
+</property>
+</configuration>
+
+------------------------------------------------------
+5. Edit yarn-site.xml
+------------------------------------------------------
+
+nano yarn-site.xml
+
+Paste:
+
+<configuration>
+<property>
+<name>yarn.nodemanager.aux-services</name>
+<value>mapreduce_shuffle</value>
+</property>
+</configuration>
+
+======================================================
+PART 7 : FORMAT NAMENODE
+======================================================
+
+Step 19: Format NameNode
+------------------------
+
+hdfs namenode -format
+
+======================================================
+PART 8 : START HADOOP SERVICES
+======================================================
+
+Step 20: Start HDFS
+-------------------
+
+start-dfs.sh
+
+Step 21: Start YARN
+-------------------
+
+start-yarn.sh
+
+======================================================
+PART 9 : CHECK DAEMONS
+======================================================
+
+Step 22: Check Running Processes
+--------------------------------
+
+jps
+
+Expected Output:
+----------------
+
+NameNode
+DataNode
+SecondaryNameNode
+ResourceManager
+NodeManager
+
+======================================================
+PART 10 : ACCESS WEB UI
+======================================================
+
+NameNode UI:
+------------
+
+http://localhost:9870
+
+ResourceManager UI:
+-------------------
+
+http://localhost:8088
+
+======================================================
+PART 11 : HDFS COMMANDS
+======================================================
+
+Create Directory:
+-----------------
+
+hdfs dfs -mkdir /input
+
+Upload File:
+------------
+
+hdfs dfs -put sample.txt /input
+
+List Files:
+-----------
+
+hdfs dfs -ls /input
+
+Read File:
+----------
+
+hdfs dfs -cat /input/sample.txt
+
+======================================================
+PART 12 : STOP HADOOP
+======================================================
+
+Stop YARN:
+-----------
+
+stop-yarn.sh
+
+Stop HDFS:
+-----------
+
+stop-dfs.sh
+
+======================================================
+MULTI NODE HADOOP ADDITIONAL STEPS
+======================================================
+
+Step 1: Configure Hosts File
+----------------------------
+
+sudo nano /etc/hosts
+
+Example:
+
+192.168.1.10 master
+192.168.1.11 slave1
+192.168.1.12 slave2
+
+Step 2: Configure Workers File
+------------------------------
+
+nano /usr/local/hadoop/etc/hadoop/workers
+
+Add:
+
+slave1
+slave2
+
+Step 3: Setup Passwordless SSH
+------------------------------
+
+ssh-copy-id hadoop@slave1
+ssh-copy-id hadoop@slave2
+
+Step 4: Start Hadoop Cluster
+----------------------------
+
+start-dfs.sh
+start-yarn.sh
+
+======================================================
+IMPORTANT VIVA QUESTIONS
+======================================================
+
+1. What is Hadoop?
+   Hadoop is a framework for distributed storage and processing of big data.
+
+2. What is HDFS?
+   Hadoop Distributed File System.
+
+3. What is NameNode?
+   Master node storing metadata.
+
+4. What is DataNode?
+   Node storing actual data blocks.
+
+5. What does jps command do?
+   Shows running Java processes.
+
+6. Why SSH is used in Hadoop?
+   For communication between nodes.
+
+7. What is replication factor?
+   Number of copies of data blocks.
+
+8. Difference between Single Node and Multi Node?
+   Single node uses one system.
+   Multi node uses multiple systems.
+
+======================================================
+END OF PRACTICAL
+======================================================

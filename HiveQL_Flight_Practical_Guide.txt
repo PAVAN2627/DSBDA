@@ -1,0 +1,414 @@
+
+HIVEQL FLIGHT INFORMATION SYSTEM PRACTICAL
+==========================================
+
+Aim:
+-----
+To perform HiveQL operations on Flight Information System using Hadoop and Hive on Ubuntu Linux.
+
+Operations Included:
+--------------------
+1. Creating Database and Tables
+2. Dropping and Altering Tables
+3. Creating External Table
+4. Loading Data
+5. Inserting Values
+6. Joining Tables
+7. Creating Index
+8. Finding Average Delay
+
+========================================================
+PART 1 : PRE-REQUIREMENTS
+========================================================
+
+The following software must be installed before practical:
+
+1. Java
+2. Hadoop
+3. Hive
+4. SSH
+
+========================================================
+PART 2 : INSTALLATION STEPS
+========================================================
+
+--------------------------------------------------------
+STEP 1 : INSTALL JAVA
+--------------------------------------------------------
+
+Open Terminal and run:
+
+sudo apt update
+
+sudo apt install openjdk-11-jdk -y
+
+Check Java Version:
+
+java -version
+
+Expected Output:
+----------------
+openjdk version "11"
+
+========================================================
+STEP 2 : INSTALL SSH
+========================================================
+
+Install SSH:
+
+sudo apt install ssh -y
+
+Check SSH:
+
+ssh localhost
+
+========================================================
+STEP 3 : DOWNLOAD HADOOP
+========================================================
+
+Download Hadoop:
+
+wget https://downloads.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz
+
+Extract Hadoop:
+
+tar -xvzf hadoop-3.3.6.tar.gz
+
+Move Hadoop:
+
+sudo mv hadoop-3.3.6 /usr/local/hadoop
+
+========================================================
+STEP 4 : SET HADOOP ENVIRONMENT VARIABLES
+========================================================
+
+Open bashrc:
+
+nano ~/.bashrc
+
+Add These Lines:
+
+export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+export HADOOP_HOME=/usr/local/hadoop
+export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin
+
+Save and Exit.
+
+Reload bashrc:
+
+source ~/.bashrc
+
+========================================================
+STEP 5 : START HADOOP
+========================================================
+
+Format NameNode:
+
+hdfs namenode -format
+
+Start HDFS:
+
+start-dfs.sh
+
+Start YARN:
+
+start-yarn.sh
+
+Check Running Daemons:
+
+jps
+
+Expected Output:
+----------------
+
+NameNode
+DataNode
+SecondaryNameNode
+ResourceManager
+NodeManager
+
+========================================================
+STEP 6 : INSTALL HIVE
+========================================================
+
+Download Hive:
+
+wget https://downloads.apache.org/hive/hive-3.1.3/apache-hive-3.1.3-bin.tar.gz
+
+Extract Hive:
+
+tar -xvzf apache-hive-3.1.3-bin.tar.gz
+
+Move Hive:
+
+sudo mv apache-hive-3.1.3-bin /usr/local/hive
+
+========================================================
+STEP 7 : SET HIVE VARIABLES
+========================================================
+
+Open bashrc again:
+
+nano ~/.bashrc
+
+Add:
+
+export HIVE_HOME=/usr/local/hive
+export PATH=$PATH:$HIVE_HOME/bin
+
+Reload bashrc:
+
+source ~/.bashrc
+
+========================================================
+STEP 8 : START HIVE
+========================================================
+
+Type:
+
+hive
+
+If successful:
+
+hive>
+
+will appear.
+
+========================================================
+PART 3 : PERFORMING PRACTICAL
+========================================================
+
+--------------------------------------------------------
+STEP 1 : CREATE DATABASE
+--------------------------------------------------------
+
+CREATE DATABASE flightdb;
+
+--------------------------------------------------------
+STEP 2 : USE DATABASE
+--------------------------------------------------------
+
+USE flightdb;
+
+========================================================
+STEP 3 : CREATE TABLE
+========================================================
+
+CREATE TABLE flights(
+FlightID INT,
+Source STRING,
+Destination STRING,
+Delay INT,
+Year INT
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE;
+
+========================================================
+STEP 4 : VIEW TABLES
+========================================================
+
+SHOW TABLES;
+
+========================================================
+STEP 5 : DESCRIBE TABLE
+========================================================
+
+DESCRIBE flights;
+
+========================================================
+STEP 6 : ALTER TABLE
+========================================================
+
+Add New Column:
+
+ALTER TABLE flights
+ADD COLUMNS (Airline STRING);
+
+========================================================
+STEP 7 : RENAME TABLE
+========================================================
+
+ALTER TABLE flights
+RENAME TO flight_info;
+
+========================================================
+STEP 8 : DROP TABLE
+========================================================
+
+DROP TABLE flight_info;
+
+========================================================
+STEP 9 : CREATE EXTERNAL TABLE
+========================================================
+
+CREATE EXTERNAL TABLE flights_ext(
+FlightID INT,
+Source STRING,
+Destination STRING,
+Delay INT,
+Year INT
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+LOCATION '/user/hadoop/flights';
+
+========================================================
+STEP 10 : CREATE SAMPLE CSV FILE
+========================================================
+
+Create flights.csv file using nano editor:
+
+nano flights.csv
+
+Add Sample Data:
+
+101,Pune,Delhi,20,2008
+102,Mumbai,Chennai,30,2008
+103,Delhi,Bangalore,10,2008
+
+Save file.
+
+========================================================
+STEP 11 : UPLOAD FILE TO HDFS
+========================================================
+
+Create HDFS Folder:
+
+hdfs dfs -mkdir /user/hadoop/flights
+
+Upload File:
+
+hdfs dfs -put flights.csv /user/hadoop/flights
+
+========================================================
+STEP 12 : LOAD DATA INTO TABLE
+========================================================
+
+LOAD DATA INPATH
+'/user/hadoop/flights/flights.csv'
+INTO TABLE flights;
+
+========================================================
+STEP 13 : DISPLAY DATA
+========================================================
+
+SELECT * FROM flights;
+
+========================================================
+STEP 14 : INSERT VALUES
+========================================================
+
+INSERT INTO flights VALUES
+(104,'Pune','Hyderabad',15,2008);
+
+========================================================
+STEP 15 : CREATE SECOND TABLE
+========================================================
+
+CREATE TABLE airlines(
+FlightID INT,
+Airline STRING
+);
+
+========================================================
+STEP 16 : INSERT VALUES INTO AIRLINES
+========================================================
+
+INSERT INTO airlines VALUES
+(101,'Indigo'),
+(102,'AirIndia'),
+(103,'SpiceJet');
+
+========================================================
+STEP 17 : JOIN TABLES
+========================================================
+
+SELECT
+f.FlightID,
+f.Source,
+a.Airline
+FROM flights f
+JOIN airlines a
+ON f.FlightID = a.FlightID;
+
+========================================================
+STEP 18 : CREATE INDEX
+========================================================
+
+CREATE INDEX flight_index
+ON TABLE flights(FlightID)
+AS 'COMPACT'
+WITH DEFERRED REBUILD;
+
+========================================================
+STEP 19 : REBUILD INDEX
+========================================================
+
+ALTER INDEX flight_index
+ON flights
+REBUILD;
+
+========================================================
+STEP 20 : FIND AVERAGE DELAY
+========================================================
+
+SELECT AVG(Delay)
+FROM flights
+WHERE Year = 2008;
+
+========================================================
+PART 4 : IMPORTANT COMMANDS
+========================================================
+
+Start Hadoop:
+
+start-dfs.sh
+start-yarn.sh
+
+Stop Hadoop:
+
+stop-dfs.sh
+stop-yarn.sh
+
+Check Daemons:
+
+jps
+
+Open Hive:
+
+hive
+
+Exit Hive:
+
+exit;
+
+========================================================
+PART 5 : IMPORTANT VIVA QUESTIONS
+========================================================
+
+1. What is Hive?
+   Hive is a data warehouse tool on Hadoop.
+
+2. What is HiveQL?
+   SQL-like query language for Hive.
+
+3. What is External Table?
+   Table whose data remains after dropping table.
+
+4. What is HDFS?
+   Hadoop Distributed File System.
+
+5. Why index is used?
+   To improve search performance.
+
+6. What is JOIN?
+   Combining tables using common column.
+
+7. What is AVG()?
+   Function used to calculate average.
+
+========================================================
+END OF PRACTICAL
+========================================================

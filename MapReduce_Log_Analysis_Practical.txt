@@ -1,0 +1,439 @@
+
+MAPREDUCE LOG ANALYSIS PRACTICAL USING JAVA
+===========================================
+
+Aim:
+-----
+To design a distributed application using MapReduce (Java) which processes a log file
+and lists users who logged in for maximum time using Hadoop pseudo distributed mode.
+
+=========================================================
+PART 1 : PRE-REQUIREMENTS
+=========================================================
+
+The following software must be installed:
+
+1. Ubuntu Linux
+2. Java
+3. Hadoop
+4. SSH
+
+=========================================================
+PART 2 : JAVA INSTALLATION
+=========================================================
+
+Step 1: Update Ubuntu
+---------------------
+
+sudo apt update
+
+Step 2: Install Java
+--------------------
+
+sudo apt install openjdk-11-jdk -y
+
+Step 3: Check Java Version
+--------------------------
+
+java -version
+
+Expected Output:
+----------------
+openjdk version "11"
+
+=========================================================
+PART 3 : SSH INSTALLATION
+=========================================================
+
+Step 4: Install SSH
+-------------------
+
+sudo apt install ssh -y
+
+Step 5: Test SSH
+----------------
+
+ssh localhost
+
+=========================================================
+PART 4 : HADOOP INSTALLATION
+=========================================================
+
+Step 6: Download Hadoop
+-----------------------
+
+wget https://downloads.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz
+
+Step 7: Extract Hadoop
+----------------------
+
+tar -xvzf hadoop-3.3.6.tar.gz
+
+Step 8: Move Hadoop
+-------------------
+
+sudo mv hadoop-3.3.6 /usr/local/hadoop
+
+=========================================================
+PART 5 : SET ENVIRONMENT VARIABLES
+=========================================================
+
+Step 9: Open bashrc File
+------------------------
+
+nano ~/.bashrc
+
+Add These Lines:
+----------------
+
+export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+export HADOOP_HOME=/usr/local/hadoop
+export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin
+
+Save and Exit.
+
+Step 10: Reload bashrc
+----------------------
+
+source ~/.bashrc
+
+=========================================================
+PART 6 : START HADOOP
+=========================================================
+
+Step 11: Format NameNode
+------------------------
+
+hdfs namenode -format
+
+Step 12: Start HDFS
+-------------------
+
+start-dfs.sh
+
+Step 13: Start YARN
+-------------------
+
+start-yarn.sh
+
+Step 14: Check Running Daemons
+------------------------------
+
+jps
+
+Expected Output:
+----------------
+
+NameNode
+DataNode
+SecondaryNameNode
+ResourceManager
+NodeManager
+
+=========================================================
+PART 7 : CREATE LOG FILE
+=========================================================
+
+Step 15: Create Input Log File
+------------------------------
+
+nano log.txt
+
+Add Sample Data:
+----------------
+
+user1 120
+user2 300
+user1 100
+user3 200
+user2 150
+user3 50
+
+Save file.
+
+Meaning:
+--------
+First column = Username
+Second column = Login Time in Minutes
+
+=========================================================
+PART 8 : CREATE JAVA FILES
+=========================================================
+
+Step 16: Create Mapper File
+---------------------------
+
+nano LogMapper.java
+
+Paste Following Code:
+---------------------
+
+import java.io.IOException;
+
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+
+import org.apache.hadoop.mapreduce.Mapper;
+
+public class LogMapper extends Mapper<Object, Text, Text, IntWritable>
+{
+    public void map(Object key, Text value, Context context)
+    throws IOException, InterruptedException
+    {
+        String line = value.toString();
+
+        String[] parts = line.split(" ");
+
+        String user = parts[0];
+
+        int time = Integer.parseInt(parts[1]);
+
+        context.write(
+            new Text(user),
+            new IntWritable(time)
+        );
+    }
+}
+
+=========================================================
+Step 17: Create Reducer File
+=========================================================
+
+nano LogReducer.java
+
+Paste Following Code:
+---------------------
+
+import java.io.IOException;
+
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+
+import org.apache.hadoop.mapreduce.Reducer;
+
+public class LogReducer extends Reducer<Text, IntWritable, Text, IntWritable>
+{
+    public void reduce(
+        Text key,
+        Iterable<IntWritable> values,
+        Context context
+    )
+    throws IOException, InterruptedException
+    {
+        int sum = 0;
+
+        for(IntWritable val : values)
+        {
+            sum += val.get();
+        }
+
+        context.write(key, new IntWritable(sum));
+    }
+}
+
+=========================================================
+Step 18: Create Driver File
+=========================================================
+
+nano LogDriver.java
+
+Paste Following Code:
+---------------------
+
+import org.apache.hadoop.conf.Configuration;
+
+import org.apache.hadoop.fs.Path;
+
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+
+import org.apache.hadoop.mapreduce.Job;
+
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+public class LogDriver
+{
+    public static void main(String[] args)
+    throws Exception
+    {
+        Configuration conf = new Configuration();
+
+        Job job = Job.getInstance(conf, "Log Analysis");
+
+        job.setJarByClass(LogDriver.class);
+
+        job.setMapperClass(LogMapper.class);
+
+        job.setReducerClass(LogReducer.class);
+
+        job.setOutputKeyClass(Text.class);
+
+        job.setOutputValueClass(IntWritable.class);
+
+        FileInputFormat.addInputPath(
+            job,
+            new Path(args[0])
+        );
+
+        FileOutputFormat.setOutputPath(
+            job,
+            new Path(args[1])
+        );
+
+        System.exit(job.waitForCompletion(true) ? 0 : 1);
+    }
+}
+
+=========================================================
+PART 9 : COMPILE JAVA FILES
+=========================================================
+
+Step 19: Compile Java Files
+---------------------------
+
+javac -classpath `hadoop classpath` -d . LogMapper.java LogReducer.java LogDriver.java
+
+Explanation:
+------------
+Converts .java files into .class files.
+
+=========================================================
+PART 10 : CREATE JAR FILE
+=========================================================
+
+Step 20: Create JAR File
+------------------------
+
+jar -cvf loganalysis.jar *
+
+Explanation:
+------------
+Creates executable Hadoop JAR file.
+
+=========================================================
+PART 11 : EXECUTION PROCESS
+=========================================================
+
+Step 21: Create Input Directory in HDFS
+---------------------------------------
+
+hdfs dfs -mkdir /input
+
+Step 22: Upload Log File
+------------------------
+
+hdfs dfs -put log.txt /input
+
+Step 23: Remove Output Folder if Exists
+---------------------------------------
+
+hdfs dfs -rm -r /output
+
+(Use only if output folder already exists.)
+
+=========================================================
+Step 24: Run MapReduce Program
+=========================================================
+
+hadoop jar loganalysis.jar LogDriver /input/log.txt /output
+
+Explanation:
+------------
+Runs Hadoop MapReduce job.
+
+=========================================================
+Step 25: View Output
+=========================================================
+
+hdfs dfs -cat /output/part-r-00000
+
+Expected Output:
+----------------
+
+user1 220
+user2 450
+user3 250
+
+=========================================================
+INTERPRETATION
+=========================================================
+
+user2 has maximum login time:
+
+450 minutes
+
+=========================================================
+MAPREDUCE WORKFLOW
+=========================================================
+
+Input File
+   ↓
+Mapper
+   ↓
+Key-Value Pairs
+   ↓
+Shuffle & Sort
+   ↓
+Reducer
+   ↓
+Final Output
+
+=========================================================
+IMPORTANT COMMANDS
+=========================================================
+
+Start Hadoop:
+
+start-dfs.sh
+start-yarn.sh
+
+Stop Hadoop:
+
+stop-dfs.sh
+stop-yarn.sh
+
+Check Running Daemons:
+
+jps
+
+List HDFS Files:
+
+hdfs dfs -ls /
+
+View HDFS Output:
+
+hdfs dfs -cat /output/part-r-00000
+
+=========================================================
+IMPORTANT VIVA QUESTIONS
+=========================================================
+
+1. What is Hadoop?
+   Hadoop is a framework for distributed processing of big data.
+
+2. What is MapReduce?
+   Programming model for parallel data processing.
+
+3. What is Mapper?
+   Processes input data and generates key-value pairs.
+
+4. What is Reducer?
+   Combines values of same key.
+
+5. What is HDFS?
+   Hadoop Distributed File System.
+
+6. What is pseudo distributed mode?
+   Hadoop running on single system behaving like cluster.
+
+7. Why JAR file is used?
+   Hadoop executes MapReduce programs using JAR file.
+
+8. What does jps command do?
+   Displays running Java processes.
+
+=========================================================
+END OF PRACTICAL
+=========================================================
